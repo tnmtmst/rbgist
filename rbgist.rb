@@ -41,11 +41,11 @@ class Gist
 
   def cprint(str, clr)
     colors = {
-      reset: 0, red: 31, green: 32, yellow: 33
+      red: 31, green: 32, yellow: 33
     }
     print "\e[#{colors[clr].to_s}m"
     print str
-    print "\e[#{colors[:reset].to_s}m"
+    print "\e[0m"
   end
 end
 
