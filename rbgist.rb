@@ -13,15 +13,17 @@ class Gist
     @token = `git config --global github.token`.gsub(/(\r\n|\r|\n)/, "")
   end
 
-  def list_gists(options = {})
+  def htpps(request)
     https = Net::HTTP.new(API_URL.host, API_URL.port)
     https.use_ssl = true
-
-    req = Net::HTTP::Get.new("/gists?access_token=#{CGI.escape(@token)}")
-    res = https.start do |http|
-      http.request(req)
+    response = https.start do |http|
+      http.request(request)
     end
+  end
 
+  def list_gists(options = {})
+    req = Net::HTTP::Get.new("/gists?access_token=#{CGI.escape(@token)}")
+    res = htpps req
     body = JSON.parse res.body
 
     body.each do |gist|
