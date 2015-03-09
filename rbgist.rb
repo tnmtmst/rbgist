@@ -27,8 +27,7 @@ class Gist
     body = JSON.parse res.body
 
     body.each do |gist|
-      print "id: "
-      cprint "#{gist['id']}", :yellow
+      print "id: ", "#{gist['id']}".color(:yellow)
       puts " #{gist['description'] || gist['files'].keys.join(" ")} #{gist['public'] ? '' : '(secret)'}"
 
       unless options[:oneline]
@@ -39,13 +38,78 @@ class Gist
     end
   end
 
-  def cprint(str, clr)
-    colors = {
-      red: 31, green: 32, yellow: 33
-    }
-    print "\e[#{colors[clr].to_s}m"
-    print str
-    print "\e[0m"
+  def show_gist(options = {})
+    req = Net::HTTP::Get.new("/gists/#{options[:list]}?access_token=#{CGI.escape(@token)}")
+    res = htpps req
+    body = JSON.parse res.body
+
+    print "id: ", "#{body['id']}".color(:yellow)
+    puts " #{body['description'] || body['files'].keys.join(" ")} #{body['public'] ? '' : '(secret)'}"
+
+    body['files'].each do |filename, file|
+      puts '--------------------'
+      puts "* #{filename}"
+      puts '--------------------'
+      puts file['content'].color(:green)
+      puts "\n\n"
+    end
+  end
+
+  def create_gist(filenames, options={})
+    req = Net::HTTP::Post.new("/gists?access_token=#{CGI.escape(@token)}")
+
+    files = {}
+    filenames.each do |filename|
+      files[filename] = {
+        filename: filename,
+        content: File.read(filename)
+      }
+    end
+
+    req.body = JSON.dump({
+      description: options[:description] || '',
+      public: !options[:private],
+      files: files
+    })
+    res = htpps req
+
+    if res.code == '201' # Created
+      puts "Success".color(:green)
+    else
+      puts "Failure".color(:red)
+      puts res.body
+    end
+  end
+end
+
+class String
+  FOREGROUND_COLORS = {
+    black:   30,
+    red:     31,
+    green:   32,
+    yellow:  33,
+    blue:    34,
+    magenta: 35,
+    cyan:    36,
+    white:   37
+  }
+  BACKGROUND_COLORS = {
+    black:   40,
+    red:     41,
+    green:   42,
+    yellow:  43,
+    blue:    44,
+    magenta: 45,
+    cyan:    46,
+    white:   47
+  }
+
+  def color(clr)
+    "\e[#{FOREGROUND_COLORS[clr].to_s}m" + self + "\e[0m"
+  end
+
+  def background(clr)
+    "\e[#{BACKGROUND_COLORS[clr].to_s}m" + self + "\e[0m"
   end
 end
 
@@ -53,12 +117,36 @@ gist = Gist.new
 
 options={}
 OptionParser.new do |opt|
-  opt.on('-l', '--list', 'list') {|v| options[:list] = v}
-  opt.on('--oneline', 'oneline') {|v| options[:oneline] = v}
+  opt.on('-l [Gist_id]', '--list [Gist_id]', 'List Gists') do |v|
+    v ||= ''
+    options[:list] = v
+  end
+  opt.on('--oneline', 'Display oneline') {|v| options[:oneline] = v}
+
+  opt.on('-c', '--create', 'Create new Gist') {|v| options[:create] = v}
+
+  opt.on('--private', 'Private Gist') {|v| options[:private] = v}
+  opt.on('-d DESC', '--description DESC', 'Description for Gist')  {|v| options[:description] = v}
 
   opt.permute!(ARGV)
 end
 
-if options[:list]
-  gist.list_gists options
+unless options[:list].nil?
+  if options[:list].empty?
+    gist.list_gists options
+  else
+    gist.show_gist options
+  end
+end
+
+if options[:create]
+  unless ARGV.empty?
+    filenames = []
+    ARGV.each do |arg|
+      filenames << arg
+    end
+    gist.create_gist filenames, options
+  else
+    puts "Require file select for create Gist !".color(:red)
+  end
 end
