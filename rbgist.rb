@@ -9,7 +9,6 @@ class Gist
   API_URL = URI.parse('https://api.github.com/')
 
   def initialize
-    @user =  `git config --global github.user`
     @token = `git config --global github.token`.gsub(/(\r\n|\r|\n)/, "")
   end
 
