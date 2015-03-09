@@ -41,29 +41,34 @@ class Gist
           puts "  * #{file[0]}".color(:green)
         end
       end
-
-      print "\n"
     end
   end
 
   def show_gist(options = {})
-    req = Net::HTTP::Get.new("/gists/#{options[:list]}?access_token=#{CGI.escape(@token)}")
+    req = Net::HTTP::Get.new("/gists/#{options[:id]}?access_token=#{CGI.escape(@token)}")
     res = htpps req
     body = JSON.parse res.body
 
-    print "id: ", "#{body['id']}".color(:yellow)
-    puts " #{body['description'] || body['files'].keys.join(" ")} #{body['public'] ? '' : '(secret)'}"
+    unless options[:filename].nil?
+      puts body['files'][options[:filename]]['content'].color(:green)
+      return
+    end
 
+    puts "id: " + "#{body['id']}\n".color(:yellow)
+
+    puts "Description"
+    puts "  #{body['description'] || body['files'].keys.join(" ")} #{body['public'] ? '' : '(secret)'}".color(:green)
+
+    print "\n"
+    puts "Clone URL"
+    puts "  https://gist.github.com/#{body['id']}.git".color(:green)
+    puts "  git@gist.github.com:/#{body['id']}.git".color(:green)
+    print "\n"
+
+    puts "Files"
     body['files'].each do |filename, file|
-      puts '--------------------'
-      puts "* #{filename}"
-      puts '--------------------'
-      if options[:url]
-        puts file['raw_url']
-      else
-        puts file['content'].color(:green)
-      end
-      puts "\n\n"
+      puts "  * #{filename}".color(:green)
+      puts ">>>\n" + "#{file['content']}\n".color(:cyan) + "<<<\n\n" if options[:verbose]
     end
   end
 
@@ -133,38 +138,34 @@ gist = Gist.new
 
 options={}
 OptionParser.new do |opt|
-  opt.on('-l [Gist_id]', '--list [Gist_id]', 'List Gists') do |v|
-    v ||= ''
-    options[:list] = v
-  end
+  opt.on('-l', '--list', 'List Gists') {|v| options[:list] = v}
   opt.on('--oneline', 'Display oneline') {|v| options[:oneline] = v}
-  opt.on('--url', 'Gist raw URL') {|v| options[:url] = v}
+  opt.on('-v' ,'--verbose', 'Verbose') {|v| options[:verbose] = v}
+
+  opt.on('-i Gist_id', '--id Gist_id', 'Show Gists') {|v| options[:id] = v}
+  opt.on('-f File_name', '--file File_name', 'File name in gist') {|v| options[:filename] = v}
 
   opt.on('-c', '--create', 'Create new Gist') {|v| options[:create] = v}
-
   opt.on('--private', 'Private Gist') {|v| options[:private] = v}
   opt.on('-d DESC', '--description DESC', 'Description for Gist')  {|v| options[:description] = v}
 
   opt.permute!(ARGV)
 end
 
-unless options[:list].nil?
-  if options[:list].empty?
-    gist.list_gists options
-  else
-    gist.show_gist options
+if ARGV.empty? # No args
+  if options[:list]
+    gist.list_gists options if     options[:id].nil?
+    gist.show_gist options  unless options[:id].nil?
   end
-end
 
-if options[:create]
-  unless ARGV.empty?
+  puts "Require file select for create Gist !".color(:red) if options[:create]
+else # Exist args
+  if options[:create]
     filenames = []
     ARGV.each do |arg|
       filenames << arg
     end
     gist.create_gist filenames, options
-  else
-    puts "Require file select for create Gist !".color(:red)
   end
 end
 
