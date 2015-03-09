@@ -30,11 +30,19 @@ class Gist
       print "id: ", "#{gist['id']}".color(:yellow)
       puts " #{gist['description'] || gist['files'].keys.join(" ")} #{gist['public'] ? '' : '(secret)'}"
 
+
       unless options[:oneline]
+        if options[:url]
+          puts "  https: https://gist.github.com/#{gist['id']}.git"
+          puts "  ssh  : git@gist.github.com:/#{gist['id']}.git"
+        end
+
         gist['files'].each do |file|
-          puts "  * #{file[0]}"
+          puts "  * #{file[0]}".color(:green)
         end
       end
+
+      print "\n"
     end
   end
 
@@ -50,7 +58,11 @@ class Gist
       puts '--------------------'
       puts "* #{filename}"
       puts '--------------------'
-      puts file['content'].color(:green)
+      if options[:url]
+        puts file['raw_url']
+      else
+        puts file['content'].color(:green)
+      end
       puts "\n\n"
     end
   end
@@ -74,7 +86,11 @@ class Gist
     res = htpps req
 
     if res.code == '201' # Created
+      body = JSON.parse res.body
+
       puts "Success".color(:green)
+      puts "https: https://gist.github.com/#{body['id']}.git"
+      puts "ssh  : git@gist.github.com:/#{body['id']}.git"
     else
       puts "Failure".color(:red)
       puts res.body
@@ -122,6 +138,7 @@ OptionParser.new do |opt|
     options[:list] = v
   end
   opt.on('--oneline', 'Display oneline') {|v| options[:oneline] = v}
+  opt.on('--url', 'Gist raw URL') {|v| options[:url] = v}
 
   opt.on('-c', '--create', 'Create new Gist') {|v| options[:create] = v}
 
@@ -150,3 +167,4 @@ if options[:create]
     puts "Require file select for create Gist !".color(:red)
   end
 end
+
