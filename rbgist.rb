@@ -71,14 +71,14 @@ class Gist
     end
   end
 
-  def create_gist(filenames, options={})
+  def create_gist(file_paths, options={})
     req = Net::HTTP::Post.new("/gists?access_token=#{CGI.escape(@token)}")
 
     files = {}
-    filenames.each do |filename|
-      files[filename] = {
-        filename: filename,
-        content: File.read(filename)
+    file_paths.each do |file_path|
+      files[file_path] = {
+        filename: File.basename(file_path),
+        content:  File.read(file_path)
       }
     end
 
@@ -164,10 +164,10 @@ if ARGV.empty? # No args
   puts "Require file select for create Gist !".color(:red) if options[:create]
 else # Exist args
   if options[:create]
-    filenames = []
+    file_paths = []
     ARGV.each do |arg|
-      filenames << arg
+      file_paths << arg
     end
-    gist.create_gist filenames, options
+    gist.create_gist file_paths, options
   end
 end
