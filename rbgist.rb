@@ -132,6 +132,10 @@ class String
   def background(clr)
     "\e[#{BACKGROUND_COLORS[clr].to_s}m" + self + "\e[0m"
   end
+
+  def bold
+    "\e[1m" + self + "\e[0m"
+  end
 end
 
 gist = Gist.new
@@ -168,4 +172,3 @@ else # Exist args
     gist.create_gist filenames, options
   end
 end
-
